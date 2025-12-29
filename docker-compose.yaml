@@ -1,9 +1,25 @@
 version: '3.8'
+
 services:
   bot:
-    image: telegram-bot
+    image: h4rdl/telegram-bot
     container_name: my_telegram_bot
     restart: unless-stopped
     volumes:
       - ./tasks_export.csv:/app/tasks_export.csv
       - ./tasks.json:/app/tasks.json
+    environment:
+      - TELEGRAM_API_TOKEN=${TELEGRAM_API_TOKEN}  # Передаём токен из .env
+    env_file:
+      - .env  # Файл с переменными окружения
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - bot-network
+
+networks:
+  bot-network:
+    driver: bridge
