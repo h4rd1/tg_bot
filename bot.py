@@ -255,19 +255,35 @@ def export(message):
         bot.reply_to(message, "[!] Не удалось экспортировать задачи в CSV.")
 
 
-# Дополнительный обработчик для неизвестных команд
 @bot.message_handler(func=lambda message: True)
-def handle_unknown_command(message):
-    bot.reply_to(
-        message,
-        "Неизвестная команда. Используйте:\n"
-        "/start — показать справку\n"
-        "/add <текст> — добавить задачу\n"
-        "/list — показать задачи\n"
-        "/done <номер> — отметить как выполненную\n"
-        "/delete <номер> — удалить задачу\n"
-        "/export — экспортировать задачи в CSV"
-    )
+def handle_all_messages(message):
+    # Список команд, которые НЕ должны создавать задачи
+    commands = ['/start', '/list', '/done', '/delete', '/export']
+    
+    
+    # Если сообщение — это команда, обрабатываем её штатно
+    if message.text and message.text.startswith('/'):
+        if message.text in commands:
+            return  # Пусть другие обработчики разберутся
+        else:
+            bot.reply_to(
+                message,
+                "Неизвестная команда. Используйте:\n"
+                "/start — справка\n"
+                "/list — показать задачи\n"
+                "/done <номер> — отметить выполненную\n"
+                "/delete <номер> — удалить задачу\n"
+                "/export — экспорт в CSV"
+            )
+            return
+    
+    # Если это не команда — создаём задачу
+    task_id = add_task(message.from_user.id, message.text)
+    if task_id:
+        bot.reply_to(message, f"[✓] Задача №{task_id} добавлена!")
+    else:
+        bot.reply_to(message, "[!] Не удалось добавить задачу.")
+
 
 if __name__ == '__main__':
     logger.info("Бот запущен. Ожидание сообщений...")
