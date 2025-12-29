@@ -99,12 +99,18 @@ def get_user_tasks(user_id):
     tasks = load_tasks()
     return tasks.get(str(user_id), [])
 
+
 def add_task(user_id, text):
     """Добавить задачу"""
     tasks = load_tasks()
     user_id_str = str(user_id)
-    user_tasks = tasks.get(user_id_str, [])
     
+    # Создаём список задач для пользователя, если его нет
+    if user_id_str not in tasks:
+        tasks[user_id_str] = []
+    
+    
+    user_tasks = tasks[user_id_str]
     new_task = {
         'id': len(user_tasks) + 1,
         'text': text,
@@ -114,10 +120,10 @@ def add_task(user_id, text):
     user_tasks.append(new_task)
     tasks[user_id_str] = user_tasks
     
+    
     if save_tasks(tasks) and export_to_csv(user_id):
         return new_task['id']
-    else:
-        return None
+    return None
 
 def mark_done(user_id, task_id):
     """Отметить задачу как выполненную"""
@@ -125,21 +131,23 @@ def mark_done(user_id, task_id):
     user_id_str = str(user_id)
     user_tasks = tasks.get(user_id_str, [])
     
+    
     for task in user_tasks:
         if task['id'] == task_id:
             task['done'] = True
             tasks[user_id_str] = user_tasks
+            
             if save_tasks(tasks) and export_to_csv(user_id):
                 return True
-            else:
-                return False
-    return False
+            return False
+    return False  # Задача не найдена
 
 def delete_task(user_id, task_id):
     """Удалить задачу"""
     tasks = load_tasks()
     user_id_str = str(user_id)
     user_tasks = tasks.get(user_id_str, [])
+    
     
     # Ищем задачу по ID
     task_index = -1
@@ -157,7 +165,6 @@ def delete_task(user_id, task_id):
     # Пересчитываем ID оставшихся задач
     for idx, task in enumerate(user_tasks, 1):
         task['id'] = idx
-    
     # Обновляем словарь задач
     tasks[user_id_str] = user_tasks
     
@@ -212,6 +219,7 @@ def list_tasks(message):
     response = format_tasks(tasks)
     bot.reply_to(message, response)
 
+
 @bot.message_handler(commands=['done'])
 def done(message):
     try:
@@ -224,7 +232,6 @@ def done(message):
         bot.reply_to(message, "[!] Укажите номер задачи после /done")
     except Exception as e:
         logger.error(f"Ошибка в команде /done: {e}")
-
 
 @bot.message_handler(commands=['delete'])
 def delete(message):
@@ -248,6 +255,20 @@ def export(message):
         bot.reply_to(message, "[!] Не удалось экспортировать задачи в CSV.")
 
 
+# Дополнительный обработчик для неизвестных команд
+@bot.message_handler(func=lambda message: True)
+def handle_unknown_command(message):
+    bot.reply_to(
+        message,
+        "Неизвестная команда. Используйте:\n"
+        "/start — показать справку\n"
+        "/add <текст> — добавить задачу\n"
+        "/list — показать задачи\n"
+        "/done <номер> — отметить как выполненную\n"
+        "/delete <номер> — удалить задачу\n"
+        "/export — экспортировать задачи в CSV"
+    )
+
 if __name__ == '__main__':
     logger.info("Бот запущен. Ожидание сообщений...")
     
@@ -261,4 +282,3 @@ if __name__ == '__main__':
         else:
             logger.info("Polling завершён. Перезапуск через 5 секунд...")
             time.sleep(5)
-
