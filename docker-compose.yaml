@@ -1,0 +1,9 @@
+version: '3.8'
+services:
+  bot:
+    image: telegram-bot
+    container_name: my_telegram_bot
+    restart: unless-stopped
+    volumes:
+      - ./tasks_export.csv:/app/tasks_export.csv
+      - ./tasks.json:/app/tasks.json
