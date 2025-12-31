@@ -1,2 +1,6 @@
 pyTelegramBotAPI==4.22.0
 python-dotenv==1.0.1
+redis
+psycopg2-binary
+sqlalchemy
+python-telegram-bot

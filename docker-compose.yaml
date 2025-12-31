@@ -1,25 +1,55 @@
 version: '3.8'
 
+
 services:
   bot:
     image: h4rdl/telegram-bot
     container_name: my_telegram_bot
     restart: unless-stopped
-    volumes:
-      - ./tasks_export.csv:/app/tasks_export.csv
-      - ./tasks.json:/app/tasks.json
     environment:
-      - TELEGRAM_API_TOKEN=${TELEGRAM_API_TOKEN}  # Передаём токен из .env
+      - TELEGRAM_API_TOKEN=${TELEGRAM_API_TOKEN}
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASS=${DB_PASS}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
     env_file:
-      - .env  # Файл с переменными окружения
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+      - .env
+    depends_on:
+      - postgres
+      - redis
     networks:
       - bot-network
 
+  postgres:
+    image: postgres:15
+    container_name: bot_postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASS}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - bot-network
+
+  redis:
+    image: redis:7
+    container_name: bot_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - bot-network
+
+volumes:
+  postgres_data:
+
 networks:
   bot-network:
-    driver: bridge
