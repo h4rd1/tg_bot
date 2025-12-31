@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 # Загрузка переменных окружения
 load_dotenv()
 
+
 # Получение токена
 API_TOKEN = os.getenv('TELEGRAM_API_TOKEN')
 if not API_TOKEN:
@@ -124,6 +125,7 @@ def save_task_to_db(user_id, text):
                 max_id = cur.fetchone()[0]
                 new_id = (max_id or 0) + 1
 
+
                 cur.execute(
                     "INSERT INTO tasks (user_id, text, task_id_in_list) "
                     "VALUES (%s, %s, %s) "
@@ -214,6 +216,7 @@ def get_user_tasks(user_id):
         return json.loads(cached)
     return load_tasks_from_db(user_id)
 
+
 def format_tasks(tasks):
     if not tasks:
         return "У вас нет задач."
@@ -234,7 +237,9 @@ def start(message):
                          "/list — показать задачи\n"
                          "/done <номер> — отметить как выполненную\n"
                          "/delete <номер> — удалить задачу\n"
-                         "/export — экспортировать задачи в CSV")
+                         "/export — экспортировать задачи в CSV\n"
+                         "/clear_all — удалить все задачи\n"
+                         "/done_all — отметить все задачи как выполненные")
 
 
 @bot.message_handler(commands=['list'])
@@ -284,6 +289,68 @@ def delete_task(message):
         bot.reply_to(message, "Задача не найдена.")
 
 
+@bot.message_handler(commands=['clear_all'])
+def clear_all_tasks(message):
+    """Удалить все задачи пользователя"""
+    user_id = message.from_user.id
+    
+    conn = get_db_conn()
+    if not conn:
+        bot.reply_to(message, "Ошибка подключения к базе данных.")
+        return
+
+    try:
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "DELETE FROM tasks WHERE user_id = %s",
+                    (user_id,)
+                )
+                deleted_count = cur.rowcount
+                conn.commit()
+                invalidate_cache(user_id)
+        
+        if deleted_count > 0:
+            bot.reply_to(message, f"[❌] Удалено {deleted_count} задач!")
+        else:
+            bot.reply_to(message, "У вас нет задач для удаления.")
+    except Exception as e:
+        logger.error(f"Ошибка при удалении всех задач: {e}")
+        bot.reply_to(message, "Не удалось удалить задачи. Попробуйте позже.")
+    finally:
+        conn.close()
+
+@bot.message_handler(commands=['done_all'])
+def done_all_tasks(message):
+    """Отметить все задачи как выполненные"""
+    user_id = message.from_user.id
+
+    conn = get_db_conn()
+    if not conn:
+        bot.reply_to(message, "Ошибка подключения к базе данных.")
+        return
+
+    try:
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "UPDATE tasks SET done = TRUE WHERE user_id = %s AND done = FALSE",
+                    (user_id,)
+                )
+                updated_count = cur.rowcount
+                conn.commit()
+                invalidate_cache(user_id)
+        
+        if updated_count > 0:
+            bot.reply_to(message, f"[✅] Отмечено как выполненные: {updated_count} задач!")
+        else:
+            bot.reply_to(message, "Нет задач для отметки как выполненных.")
+    except Exception as e:
+        logger.error(f"Ошибка при отметке всех задач как выполненных: {e}")
+        bot.reply_to(message, "Не удалось отметить задачи. Попробуйте позже.")
+    finally:
+        conn.close()
+
 @bot.message_handler(commands=['export'])
 def export_tasks(message):
     """Экспортировать задачи в CSV"""
@@ -320,7 +387,6 @@ def add_task(message):
     user_id = message.from_user.id
     text = message.text.strip()
 
-
     if not text:
         bot.reply_to(message, "Текст задачи не может быть пустым!")
         return
@@ -336,7 +402,6 @@ if __name__ == '__main__':
     logger.info("Бот запущен. Ожидание сообщений...")
     init_db()
 
-    
     while True:
         try:
             bot.polling(non_stop=True, timeout=60)
