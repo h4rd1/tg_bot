@@ -219,7 +219,7 @@ def format_tasks(tasks):
         return "У вас нет задач."
     lines = []
     for task in tasks:
-        status = "[✓]" if task['done'] else "[⬜]"
+        status = "[✅]" if task['done'] else "[✳️]"
         # Если created_at — строка, берём первые 19 символов для краткости
         created_str = task['created_at'][:19] if isinstance(task['created_at'], str) else task['created_at']
         lines.append(f"{status} {task['task_id_in_list']}. {task['text']} ({created_str})")
@@ -259,7 +259,7 @@ def done_task(message):
         return
 
     if mark_done_in_db(message.from_user.id, task_id):
-        bot.reply_to(message, f"[✓] Задача №{task_id} отмечена как выполненная!")
+        bot.reply_to(message, f"[✅] Задача №{task_id} отмечена как выполненная!")
     else:
         bot.reply_to(message, "Задача не найдена или уже выполнена.")
 
@@ -279,7 +279,7 @@ def delete_task(message):
         return
 
     if delete_task_from_db(message.from_user.id, task_id):
-        bot.reply_to(message, f"[✓] Задача №{task_id} удалена!")
+        bot.reply_to(message, f"[❌] Задача №{task_id} удалена!")
     else:
         bot.reply_to(message, "Задача не найдена.")
 
@@ -327,7 +327,7 @@ def add_task(message):
 
     task_id = save_task_to_db(user_id, text)
     if task_id:
-        bot.reply_to(message, f"[⬜] Задача №{task_id} добавлена!")
+        bot.reply_to(message, f"[✳️] Задача №{task_id} добавлена!")
     else:
         bot.reply_to(message, "Не удалось добавить задачу. Попробуйте ещё раз.")
 
