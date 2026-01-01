@@ -63,14 +63,16 @@ def init_db():
                     done BOOLEAN DEFAULT FALSE,
                     created_at TIMESTAMP DEFAULT NOW(),
                     task_id_in_list INT NOT NULL
-                )
+                );
             """)
         conn.commit()
         logger.info("Таблица tasks проверена/создана")
     except Exception as e:
         logger.error(f"Ошибка при создании таблицы tasks: {e}")
     finally:
-        conn.close()
+        if conn:
+            conn.close()
+
 
 def load_tasks_from_db(user_id):
     """Загрузить задачи пользователя из PostgreSQL"""
@@ -98,7 +100,8 @@ def load_tasks_from_db(user_id):
         logger.error(f"Ошибка загрузки задач из БД: {e}")
         return []
     finally:
-        conn.close()
+        if conn:
+            conn.close()
 
 def save_task_to_db(user_id, text):
     """Добавить задачу в PostgreSQL"""
@@ -130,7 +133,8 @@ def save_task_to_db(user_id, text):
         logger.error(f"Ошибка сохранения задачи в БД: {e}")
         return None
     finally:
-        conn.close()
+        if conn:
+            conn.close()
 
 def mark_done_in_db(user_id, task_id_in_list):
     """Отметить задачу как выполненную"""
@@ -157,7 +161,8 @@ def mark_done_in_db(user_id, task_id_in_list):
         logger.error(f"Ошибка при отметке задачи как выполненной (user_id={user_id}, task_id_in_list={task_id_in_list}): {e}")
         return False
     finally:
-        conn.close()
+        if conn:
+            conn.close()
 
 def delete_task_from_db(user_id, task_id_in_list):
     """Удалить задачу и пересчитать task_id_in_list"""
@@ -200,14 +205,15 @@ def delete_task_from_db(user_id, task_id_in_list):
         logger.error(f"Ошибка при удалении задачи (user_id={user_id}, task_id_in_list={task_id_in_list}): {e}")
         return False
     finally:
-        conn.close()
-
+        if conn:
+            conn.close()
 def clear_all_tasks_db(user_id):
     """Удалить все задачи пользователя и вернуть количество удалённых"""
     conn = get_db_conn()
     if not conn:
         logger.error("Не удалось установить соединение с БД")
         return False, 0
+
 
     try:
         with conn:
@@ -216,14 +222,12 @@ def clear_all_tasks_db(user_id):
                 cur.execute(
                     "SELECT COUNT(*) FROM tasks WHERE user_id = %s",
                     (user_id,)
-                    
-
-                                    )
+                )
                 count_before = cur.fetchone()[0]
-
 
                 if count_before == 0:
                     return True, 0  # Нет задач — успешно, но удалено 0
+
 
                 # Удаляем все задачи
                 cur.execute(
@@ -239,7 +243,10 @@ def clear_all_tasks_db(user_id):
         logger.error(f"Ошибка при удалении всех задач для user_id={user_id}: {e}")
         return False, 0
     finally:
-        conn.close()
+        if conn:
+            conn.close()
+
+
 
 def done_all_tasks_db(user_id):
     """Отметить все задачи пользователя как выполненные"""
@@ -251,13 +258,12 @@ def done_all_tasks_db(user_id):
     try:
         with conn:
             with conn.cursor() as cur:
-                # Считаем количество задач перед обновлением
+                # Считаем количество невыполненных задач
                 cur.execute(
                     "SELECT COUNT(*) FROM tasks WHERE user_id = %s AND done = FALSE",
                     (user_id,)
                 )
                 count_pending = cur.fetchone()[0]
-
 
                 if count_pending == 0:
                     return True, 0  # Все уже выполнены — успешно, но обновлено 0
@@ -276,7 +282,10 @@ def done_all_tasks_db(user_id):
         logger.error(f"Ошибка при отметке всех задач как выполненных для user_id={user_id}: {e}")
         return False, 0
     finally:
-        conn.close()
+        if conn:
+            conn.close()
+
+
 
 def get_user_tasks(user_id):
     """Получить задачи пользователя (из кэша Redis или из PostgreSQL)"""
