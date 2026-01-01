@@ -1,23 +1,35 @@
-# Базовый образ с Python 3.11
+# 1. Базовый образ (Python 3.11, облегчённая версия)
 FROM python:3.11-slim
 
 
-# Рабочий каталог в контейнере
+# 2. Метаданные (опционально)
+LABEL description="Telegram bot with PostgreSQL + Redis integration"
+
+
+# 3. Установка рабочей директории внутри контейнера
 WORKDIR /app
 
 
-# Копируем requirements.txt и устанавливаем зависимости
+# 4. Копирование файла зависимостей
 COPY requirements.txt .
+
+# Установка зависимостей без кэширования (экономим место)
 RUN pip install --no-cache-dir -r requirements.txt
 
 
-# Копируем код бота
-COPY . .
+# 5. Копирование кода приложения
+COPY db_connect.py .
+COPY bot_functions.py .
+
+# Если есть другие файлы (например, .env шаблон), копируем их тоже
+# COPY .env .
+
+# COPY other_file.py .
 
 
-# Порт, который будет слушать бот (если используется вебхук)
+# 6. Открытие портов (если бот использует вебхуки, а не polling)
 # EXPOSE 8443
 
 
-# Запуск бота
-CMD ["python", "bot.py"]
+# 7. Команда запуска
+CMD ["python", "bot_functions.py"]
